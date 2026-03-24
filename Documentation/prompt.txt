@@ -1,0 +1,58 @@
+Project AHP Website Application
+
+	- General Information
+		○ I would like to create a web interface application for my ahp library.  The library is located in the pCode repository, the AHP Visual Studio project
+		○ An user of this application will work with AHP projects and AHP models.
+		○ The AHP calculation business logic will be provided by the existing AHP library
+		○ Additional middleware needs to be generated in C#
+		○ Microsoft SQL server will be the data base
+		○ Web pages will be in ASP.NET Core MVC with Razor Views
+		○ The website application will have its own Middleware that will allow the projects and models to be saved to data base and retrieved from data base.
+		○ The middleware will consist of entities 
+		○ Entities will have corresponding tables in the data base
+	- Entities
+		○ Project: The AHP project will have following attributes:
+			- Project Id 
+			- Project goal a string, for example "Selection of best automobile"
+			- Project description - free text to add more info about the project
+			- 1 or many Decision Models
+			- Create Date
+			- Last update date
+		○ Model: A Decision model will have following attributes
+			- Model Id
+			- Goal
+			- Collection of decision criteria
+			- Collection of alternatives
+			- Collection of AHP pairwise comparisons between decision criteria with respect to the goal
+			- Collection of AHP pairwise comparisons of alternatives with respect to each criteria
+		○ Criterion: Decision criterion will have the following attributes
+			- Criterion Id
+			- Name
+		○ Alternative: Alternative attributes
+			- Alternative id
+			- Name
+	- Web Interface
+		○ The application will have following pages
+			- Projects
+			- Add new project
+			- Edit project
+			- Add new model
+			- Edit model
+		○ Application will have navigation with two links: Projects page and Add new Project
+		○ The projects page will the starting page of the application
+		○ The Projects page shows all projects saved into the data base
+			- The projects are shown as a table 
+			- Each row in the table will have following fields - columns: project name, create date, last update date, action fields - edit, delete
+			- The table is sortable by the create date and separately by last update date
+			- After clicking on the edit button the is redirected to the project edit page for this project
+			- After clicking on the delete button the project and the associated models are removed from the data base and the page refreshes
+		○ After clicking on the create new project page the user is redirected to the new project page
+		○ On the new project page
+			- The user can enter simple attributes of the project
+			- The user can also click on add model link which will take the user to the new Model page
+			- The new model will be associated to this project
+			
+		○ the user can adds a goal and can add up to 6 decision criteria and up to 10 alternatives.
+		○ The user can save the project to db
+		○ From the project page the user can then click to model page where user can perform pairwise comparisons for selected criteria and alternatives as well as use can see results for the model , for example see the ahp-car-selection.html page for 3 criteria and 3 cars 
+		○ On the model page the user can click save model which updates the project with the model
