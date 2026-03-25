@@ -10,12 +10,14 @@ Project AHP Website Application
 		○ The website application will have its own Middleware that will allow the projects and models to be saved to data base and retrieved from data base.
 		○ The middleware will consist of entities 
 		○ Entities will have corresponding tables in the data base
+		○ The existing AHP library has definition for Model = AHPObjectModel, Goal, Criteria and alternatives,
+		so a translaton layer between new entities and existing AHP classes needs to be created.
 	- Entities
 		○ Project: The AHP project will have following attributes:
 			- Project Id 
 			- Project goal a string, for example "Selection of best automobile"
 			- Project description - free text to add more info about the project
-			- 1 or many Decision Models
+			- Decision Model
 			- Create Date
 			- Last update date
 		○ Model: A Decision model will have following attributes
@@ -23,6 +25,7 @@ Project AHP Website Application
 			- Goal
 			- Collection of decision criteria
 			- Collection of alternatives
+			- Only 1 set of decision criteria and 1 set of alternatives is supported, as per pCode library
 			- Collection of AHP pairwise comparisons between decision criteria with respect to the goal
 			- Collection of AHP pairwise comparisons of alternatives with respect to each criteria
 		○ Criterion: Decision criterion will have the following attributes
@@ -51,8 +54,11 @@ Project AHP Website Application
 			- The user can enter simple attributes of the project
 			- The user can also click on add model link which will take the user to the new Model page
 			- The new model will be associated to this project
+		○ The Model page will have two views available as tabs: the edit model view and perform comparisons view
+			- On the edit model view page	
+			- 	the user can add a goal
+			-	the user can add decision criterias and alternatives
+			- The mockup for the perform comparisons page is shown in the /Documentation/ahp-car-selection.html file
+			- The criteria and alternatives are taken dynamically from the edit model tab
 			
-		○ the user can adds a goal and can add up to 6 decision criteria and up to 10 alternatives.
-		○ The user can save the project to db
-		○ From the project page the user can then click to model page where user can perform pairwise comparisons for selected criteria and alternatives as well as use can see results for the model , for example see the ahp-car-selection.html page for 3 criteria and 3 cars 
-		○ On the model page the user can click save model which updates the project with the model
+	
