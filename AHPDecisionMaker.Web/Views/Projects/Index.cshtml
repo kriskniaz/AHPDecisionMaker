@@ -1,0 +1,94 @@
+@model List<AHPDecisionMaker.Web.ViewModels.ProjectListItemViewModel>
+@{
+    ViewData["Title"] = "Projects";
+    var currentSort = ViewBag.CurrentSort as string ?? "created_desc";
+
+    string SortIcon(string col)
+    {
+        if (currentSort == col + "_asc") return "↑";
+        if (currentSort == col + "_desc") return "↓";
+        return "↕";
+    }
+
+    string NextSort(string col)
+    {
+        if (currentSort == col + "_asc") return col + "_desc";
+        if (currentSort == col + "_desc") return col + "_asc";
+        return col + "_desc";
+    }
+
+    var sortByCreated = NextSort("created");
+    var sortByUpdated = NextSort("updated");
+    var createdActive = currentSort.StartsWith("created");
+    var updatedActive = currentSort.StartsWith("updated");
+}
+
+<div class="page-header">
+    <h1>AHP <span>Projects</span></h1>
+    <p class="subtitle">Analytic Hierarchy Process — Decision Models</p>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="empty-state">
+        <div class="empty-icon">◇</div>
+        <h3>No projects yet</h3>
+        <p>Create your first AHP decision project to get started.</p>
+        <a asp-action="Create" class="btn btn-primary">+ New Project</a>
+    </div>
+}
+else
+{
+    <div class="card" style="padding: 0; overflow: hidden;">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th style="padding-left: 24px;">Project Goal</th>
+                    <th class="sortable @(createdActive ? "sort-active" : "")"
+                        onclick="location.href='?sortBy=@sortByCreated'">
+                        Created @SortIcon("created")
+                    </th>
+                    <th class="sortable @(updatedActive ? "sort-active" : "")"
+                        onclick="location.href='?sortBy=@sortByUpdated'">
+                        Updated @SortIcon("updated")
+                    </th>
+                    <th style="text-align: right; padding-right: 24px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var project in Model)
+                {
+                    <tr>
+                        <td style="padding-left: 24px;">
+                            <div class="table-goal">@project.Goal</div>
+                            @if (!string.IsNullOrWhiteSpace(project.Description))
+                            {
+                                <div class="table-description">@project.Description</div>
+                            }
+                        </td>
+                        <td class="table-date">@project.CreatedDate.ToLocalTime().ToString("MMM d, yyyy")</td>
+                        <td class="table-date">@project.LastUpdatedDate.ToLocalTime().ToString("MMM d, yyyy")</td>
+                        <td style="padding-right: 24px;">
+                            <div class="table-actions">
+                                @if (project.HasModel && project.ModelId.HasValue)
+                                {
+                                    <a asp-controller="Models" asp-action="Edit" asp-route-id="@project.ModelId" class="btn btn-ghost btn-sm">Model</a>
+                                }
+                                <a asp-action="Edit" asp-route-id="@project.ProjectId" class="btn btn-secondary btn-sm">Edit</a>
+                                <form asp-action="Delete" asp-route-id="@project.ProjectId" method="post"
+                                      onsubmit="return confirm('Delete this project and all its data?')">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div style="display: flex; justify-content: flex-end; margin-top: 16px;">
+        <a asp-action="Create" class="btn btn-primary">+ New Project</a>
+    </div>
+}
