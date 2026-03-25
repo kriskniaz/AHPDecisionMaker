@@ -1,0 +1,538 @@
+@model AHPDecisionMaker.Web.ViewModels.ModelEditViewModel
+@{
+    ViewData["Title"] = "Decision Model";
+    var activeTab = Context.Request.Query["tab"].ToString();
+    if (string.IsNullOrEmpty(activeTab)) activeTab = "edit";
+}
+
+<div class="breadcrumb">
+    <a asp-controller="Projects" asp-action="Index">Projects</a>
+    <span class="sep">/</span>
+    <a asp-controller="Projects" asp-action="Edit" asp-route-id="@Model.ProjectId">@Model.ProjectGoal</a>
+    <span class="sep">/</span>
+    <span class="current">Decision Model</span>
+</div>
+
+<div class="page-header">
+    <h1>Decision <span>Model</span></h1>
+    <p class="subtitle">@(Model.Goal ?? Model.ProjectGoal)</p>
+</div>
+
+<!-- Tab navigation -->
+<div class="tab-nav">
+    <button class="tab-btn @(activeTab == "edit" ? "active" : "")" onclick="switchTab('edit')">Edit Model</button>
+    <button class="tab-btn @(activeTab == "comparisons" ? "active" : "")" onclick="switchTab('comparisons')">Perform Comparisons</button>
+</div>
+
+<!-- ===== TAB 1: EDIT MODEL ===== -->
+<div id="tab-edit" class="tab-pane @(activeTab == "edit" ? "active" : "")">
+
+    <!-- Goal -->
+    <div class="section-label">Decision Goal</div>
+    <div class="card" style="max-width: 640px;">
+        <form asp-controller="Models" asp-action="SaveGoal" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="modelId" value="@Model.ModelId" />
+            <div class="form-group mb-0">
+                <label class="form-label">Goal</label>
+                <div class="d-flex gap-12">
+                    <input type="text" name="goal" value="@Model.Goal" class="form-control flex-1"
+                           placeholder="e.g. Select the best automobile" autocomplete="off" />
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Criteria -->
+    <div class="section-label">Decision Criteria</div>
+    <div class="card">
+        <div class="card-title">Criteria (@Model.Criteria.Count)</div>
+
+        @if (Model.Criteria.Any())
+        {
+            <ul class="item-list">
+                @foreach (var c in Model.Criteria)
+                {
+                    <li>
+                        <div class="d-flex align-center gap-12">
+                            <span class="item-index">@(c.OrderIndex + 1).</span>
+                            <span class="item-name">@c.Name</span>
+                        </div>
+                        <form asp-controller="Models" asp-action="DeleteCriterion" method="post" style="margin:0;">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="modelId" value="@Model.ModelId" />
+                            <input type="hidden" name="criterionId" value="@c.CriterionId" />
+                            <button type="submit" class="btn btn-ghost btn-sm"
+                                    onclick="return confirm('Remove criterion «@c.Name»?')">✕</button>
+                        </form>
+                    </li>
+                }
+            </ul>
+        }
+        else
+        {
+            <p class="text-muted" style="font-size: 0.72rem; margin-bottom: 16px;">No criteria added yet.</p>
+        }
+
+        <form asp-controller="Models" asp-action="AddCriterion" method="post" class="inline-add">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="modelId" value="@Model.ModelId" />
+            <input type="text" name="name" class="form-control" placeholder="Criterion name (e.g. Price)" autocomplete="off" />
+            <button type="submit" class="btn btn-secondary">+ Add</button>
+        </form>
+    </div>
+
+    <!-- Alternatives -->
+    <div class="section-label">Decision Alternatives</div>
+    <div class="card">
+        <div class="card-title">Alternatives (@Model.Alternatives.Count)</div>
+
+        @if (Model.Alternatives.Any())
+        {
+            <ul class="item-list">
+                @foreach (var a in Model.Alternatives)
+                {
+                    <li>
+                        <div class="d-flex align-center gap-12">
+                            <span class="item-index">@(a.OrderIndex + 1).</span>
+                            <span class="item-name">@a.Name</span>
+                        </div>
+                        <form asp-controller="Models" asp-action="DeleteAlternative" method="post" style="margin:0;">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="modelId" value="@Model.ModelId" />
+                            <input type="hidden" name="alternativeId" value="@a.AlternativeId" />
+                            <button type="submit" class="btn btn-ghost btn-sm"
+                                    onclick="return confirm('Remove alternative «@a.Name»?')">✕</button>
+                        </form>
+                    </li>
+                }
+            </ul>
+        }
+        else
+        {
+            <p class="text-muted" style="font-size: 0.72rem; margin-bottom: 16px;">No alternatives added yet.</p>
+        }
+
+        <form asp-controller="Models" asp-action="AddAlternative" method="post" class="inline-add">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="modelId" value="@Model.ModelId" />
+            <input type="text" name="name" class="form-control" placeholder="Alternative name (e.g. Alfa Romeo)" autocomplete="off" />
+            <button type="submit" class="btn btn-secondary">+ Add</button>
+        </form>
+    </div>
+
+    @if (Model.Criteria.Count >= 2 && Model.Alternatives.Count >= 2)
+    {
+        <div style="display: flex; justify-content: flex-end; margin-top: 8px;">
+            <button class="btn btn-primary" onclick="switchTab('comparisons')">→ Perform Comparisons</button>
+        </div>
+    }
+    else
+    {
+        <div class="cr-display" style="max-width: 640px;">
+            Add at least <span class="cr-value">2 criteria</span> and <span class="cr-value">2 alternatives</span> to proceed to comparisons.
+        </div>
+    }
+</div>
+
+<!-- ===== TAB 2: PERFORM COMPARISONS ===== -->
+<div id="tab-comparisons" class="tab-pane @(activeTab == "comparisons" ? "active" : "")">
+
+    @if (Model.Criteria.Count < 2 || Model.Alternatives.Count < 2)
+    {
+        <div class="empty-state">
+            <div class="empty-icon">◇</div>
+            <h3>Not enough data</h3>
+            <p>Add at least 2 criteria and 2 alternatives in the Edit Model tab first.</p>
+            <button class="btn btn-primary" onclick="switchTab('edit')">← Go to Edit Model</button>
+        </div>
+    }
+    else
+    {
+        <form asp-controller="Models" asp-action="SaveComparisons" asp-route-modelId="@Model.ModelId" method="post" id="comparisons-form">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="modelId" value="@Model.ModelId" />
+
+            <!-- Step 1: Criteria comparisons -->
+            <div class="section-label">Step 1 — Criteria Pairwise Comparison</div>
+            <div class="card">
+                <div class="card-title">How important is each criterion relative to another?</div>
+                <p style="font-size: 0.68rem; color: var(--muted); margin-bottom: 24px;">
+                    Scale: 1/9 = far less important &nbsp;|&nbsp; 1 = equal &nbsp;|&nbsp; 9 = far more important
+                </p>
+
+                @foreach (var comp in Model.CriteriaComparisons)
+                {
+                    <input type="hidden" name="criteriaValues[@comp.Id]" id="hval_c_@comp.Id" value="@comp.Value.ToString("G", System.Globalization.CultureInfo.InvariantCulture)" />
+                    <div class="comparison-row">
+                        <div class="comp-label">@comp.CriterionAName</div>
+                        <div class="slider-wrap">
+                            <input type="range" id="slider_c_@comp.Id"
+                                   data-hidden="hval_c_@comp.Id"
+                                   data-type="criteria"
+                                   min="1" max="17"
+                                   value="@AhpValueToSlider(comp.Value)"
+                                   oninput="onSliderChange(this)" />
+                            <div class="slider-val" id="lbl_c_@comp.Id"></div>
+                        </div>
+                        <div class="comp-label right">@comp.CriterionBName</div>
+                    </div>
+                }
+            </div>
+
+            <!-- Criteria weights output -->
+            <div class="section-label">Criteria Weights</div>
+            <div class="card">
+                <div class="weight-bars" id="criteria-weight-bars">
+                    @foreach (var c in Model.Criteria)
+                    {
+                        <div class="weight-row">
+                            <div class="weight-name">@c.Name</div>
+                            <div class="bar-track"><div class="bar-fill" id="bar_c_@c.CriterionId"></div></div>
+                            <div class="weight-pct" id="pct_c_@c.CriterionId">—</div>
+                        </div>
+                    }
+                </div>
+                <div class="cr-display" id="cr-criteria">Consistency Ratio: <span class="cr-value">—</span></div>
+            </div>
+
+            <!-- Step 2: Alternatives per criterion -->
+            <div class="section-label">Step 2 — Alternatives Pairwise Comparison</div>
+            <div class="card">
+                <div class="tab-nav" id="alt-tab-nav">
+                    @for (int i = 0; i < Model.AlternativeComparisonGroups.Count; i++)
+                    {
+                        var group = Model.AlternativeComparisonGroups[i];
+                        <button type="button" class="tab-btn @(i == 0 ? "active" : "")"
+                                onclick="switchAltTab('alt_@group.CriterionId', this)">
+                            @group.CriterionName
+                        </button>
+                    }
+                </div>
+
+                @for (int i = 0; i < Model.AlternativeComparisonGroups.Count; i++)
+                {
+                    var group = Model.AlternativeComparisonGroups[i];
+                    <div id="alt_@group.CriterionId" class="tab-pane @(i == 0 ? "active" : "")">
+                        @foreach (var pair in group.Pairs)
+                        {
+                            <input type="hidden" name="alternativeValues[@pair.Id]" id="hval_a_@pair.Id" value="@pair.Value.ToString("G", System.Globalization.CultureInfo.InvariantCulture)" />
+                            <div class="comparison-row">
+                                <div class="comp-label">@pair.AlternativeAName</div>
+                                <div class="slider-wrap">
+                                    <input type="range" id="slider_a_@pair.Id"
+                                           data-hidden="hval_a_@pair.Id"
+                                           data-type="alternatives"
+                                           data-criterion="@group.CriterionId"
+                                           min="1" max="17"
+                                           value="@AhpValueToSlider(pair.Value)"
+                                           oninput="onSliderChange(this)" />
+                                    <div class="slider-val" id="lbl_a_@pair.Id"></div>
+                                </div>
+                                <div class="comp-label right">@pair.AlternativeBName</div>
+                            </div>
+                        }
+                        <!-- Per-criterion alternative weights -->
+                        <div class="weight-bars" id="alt-weight-bars-@group.CriterionId" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border);">
+                            @foreach (var alt in Model.Alternatives)
+                            {
+                                <div class="weight-row">
+                                    <div class="weight-name">@alt.Name</div>
+                                    <div class="bar-track"><div class="bar-fill" id="bar_a_@(group.CriterionId)_@alt.AlternativeId"></div></div>
+                                    <div class="weight-pct" id="pct_a_@(group.CriterionId)_@alt.AlternativeId">—</div>
+                                </div>
+                            }
+                        </div>
+                        <div class="cr-display" id="cr-alt-@group.CriterionId">Consistency Ratio: <span class="cr-value">—</span></div>
+                    </div>
+                }
+            </div>
+
+            <!-- Results -->
+            <div class="section-label">Result — Final Priority Scores</div>
+            <div class="card">
+                <div class="results-grid" id="results-grid">
+                    @foreach (var alt in Model.Alternatives)
+                    {
+                        <div class="result-card" id="rcard_@alt.AlternativeId">
+                            <div class="result-car">@alt.Name</div>
+                            <div class="result-score" id="rscore_@alt.AlternativeId">—</div>
+                            <div class="result-rank" id="rrank_@alt.AlternativeId">—</div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Breakdown -->
+            <div class="section-label">Score Breakdown by Criterion</div>
+            <div class="card">
+                <table class="breakdown-table" id="breakdown-table">
+                    <thead>
+                        <tr>
+                            <th>Alternative</th>
+                            @foreach (var c in Model.Criteria)
+                            {
+                                <th>@c.Name</th>
+                            }
+                            <th>Final Score</th>
+                        </tr>
+                    </thead>
+                    <tbody id="breakdown-body">
+                        @foreach (var alt in Model.Alternatives)
+                        {
+                            <tr>
+                                <td style="font-family:'Syne',sans-serif; font-weight: 700; text-align: left;">@alt.Name</td>
+                                @foreach (var c in Model.Criteria)
+                                {
+                                    <td id="bd_@(alt.AlternativeId)_@c.CriterionId" class="score-dim">—</td>
+                                }
+                                <td id="bd_final_@alt.AlternativeId" style="font-weight: 700;">—</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 8px;">
+                <button type="submit" class="btn btn-primary">Save Comparisons</button>
+            </div>
+        </form>
+    }
+</div>
+
+@section Scripts {
+<script>
+// ---- Tab switching ----
+function switchTab(name) {
+    document.querySelectorAll('.tab-pane').forEach(p => {
+        if (!p.closest('#tab-comparisons') && !p.closest('#tab-edit') || p.id === 'tab-edit' || p.id === 'tab-comparisons')
+            p.classList.remove('active');
+    });
+    document.querySelectorAll('#tab-edit, #tab-comparisons').forEach(p => p.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    document.querySelectorAll('.tab-btn').forEach((b, i) => {
+        b.classList.toggle('active', (name === 'edit' && i === 0) || (name === 'comparisons' && i === 1));
+    });
+    if (name === 'comparisons') recalcAll();
+}
+
+function switchAltTab(id, btn) {
+    const parent = btn.closest('.card');
+    parent.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    parent.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    btn.classList.add('active');
+}
+
+// ---- AHP slider math ----
+function sliderToAHP(v) {
+    if (v === 9) return 1.0;
+    if (v < 9) return 1.0 / (9 - v + 1);
+    return v - 9 + 1;
+}
+
+function sliderLabel(v) {
+    const val = sliderToAHP(v);
+    if (val === 1) return "Equal (1:1)";
+    if (val > 1) return "Left ×" + val.toFixed(2);
+    return "Right ×" + (1/val).toFixed(2);
+}
+
+function onSliderChange(slider) {
+    const v = parseInt(slider.value);
+    const ahp = sliderToAHP(v);
+    const lblId = slider.id.replace('slider_', 'lbl_');
+    document.getElementById(lblId).textContent = sliderLabel(v);
+    document.getElementById(slider.dataset.hidden).value = ahp;
+    recalcAll();
+}
+
+// ---- Matrix math ----
+function normalizeMatrix(m) {
+    const n = m.length;
+    const colSum = Array(n).fill(0);
+    for (let j = 0; j < n; j++)
+        for (let i = 0; i < n; i++) colSum[j] += m[i][j];
+    const weights = m.map(row => row.reduce((a, v, j) => a + v / colSum[j], 0) / n);
+    return weights;
+}
+
+function consistencyRatio(m, w) {
+    const n = m.length;
+    const RI = [0, 0, 0.58, 0.90, 1.12, 1.24, 1.32, 1.41, 1.45];
+    if (n < 3 || n > 9) return 0;
+    let lambdaMax = 0;
+    for (let i = 0; i < n; i++) {
+        let s = 0;
+        for (let j = 0; j < n; j++) s += m[i][j] * w[j];
+        lambdaMax += s / w[i];
+    }
+    lambdaMax /= n;
+    return ((lambdaMax - n) / (n - 1)) / RI[n - 1];
+}
+
+function buildMatrix(pairs, ids) {
+    const n = ids.length;
+    const m = Array.from({length: n}, () => Array(n).fill(1));
+    for (const p of pairs) {
+        const i = ids.indexOf(p.a);
+        const j = ids.indexOf(p.b);
+        if (i >= 0 && j >= 0) {
+            m[i][j] = p.v;
+            m[j][i] = 1.0 / p.v;
+        }
+    }
+    return m;
+}
+
+// ---- Data from server ----
+const criteriaData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Criteria.Select(c => new { id = c.CriterionId, name = c.Name })));
+const alternativesData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Alternatives.Select(a => new { id = a.AlternativeId, name = a.Name })));
+const criteriaPairs = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.CriteriaComparisons.Select(c => new { sliderEl = "slider_c_" + c.Id, a = c.CriterionAId, b = c.CriterionBId })));
+const altGroups = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AlternativeComparisonGroups.Select(g => new {
+    criterionId = g.CriterionId,
+    pairs = g.Pairs.Select(p => new { sliderEl = "slider_a_" + p.Id, a = p.AlternativeAId, b = p.AlternativeBId })
+})));
+
+function getSliderPairs(pairDefs) {
+    return pairDefs.map(p => {
+        const el = document.getElementById(p.sliderEl);
+        return el ? { a: p.a, b: p.b, v: sliderToAHP(parseInt(el.value)) } : null;
+    }).filter(x => x !== null);
+}
+
+function recalcAll() {
+    const critIds = criteriaData.map(c => c.id);
+    const altIds = alternativesData.map(a => a.id);
+
+    // Criteria matrix
+    const critPairValues = getSliderPairs(criteriaPairs);
+    const critMatrix = buildMatrix(critPairValues, critIds);
+    const critWeights = normalizeMatrix(critMatrix);
+    const critCR = consistencyRatio(critMatrix, critWeights);
+
+    criteriaData.forEach((c, i) => {
+        const pct = (critWeights[i] * 100).toFixed(1) + '%';
+        const bar = document.getElementById('bar_c_' + c.id);
+        const pctEl = document.getElementById('pct_c_' + c.id);
+        if (bar) bar.style.width = (critWeights[i] * 100) + '%';
+        if (pctEl) pctEl.textContent = pct;
+    });
+
+    const crEl = document.getElementById('cr-criteria');
+    if (crEl) {
+        const ok = critCR < 0.1;
+        crEl.innerHTML = `Consistency Ratio: <span class="${ok ? 'cr-value' : 'cr-bad'}">${critCR.toFixed(3)}</span> ${ok ? '✓ Acceptable' : '✗ Inconsistent (> 0.10)'}`;
+    }
+
+    // Final scores
+    const finalScores = {};
+    alternativesData.forEach(a => finalScores[a.id] = 0);
+
+    const altWeightsPerCrit = {};
+    altGroups.forEach((group, gi) => {
+        const pairs = getSliderPairs(group.pairs);
+        const mat = buildMatrix(pairs, altIds);
+        const weights = normalizeMatrix(mat);
+        const cr = consistencyRatio(mat, weights);
+
+        altWeightsPerCrit[group.criterionId] = weights;
+
+        alternativesData.forEach((a, i) => {
+            const bar = document.getElementById('bar_a_' + group.criterionId + '_' + a.id);
+            const pctEl = document.getElementById('pct_a_' + group.criterionId + '_' + a.id);
+            if (bar) bar.style.width = (weights[i] * 100) + '%';
+            if (pctEl) pctEl.textContent = (weights[i] * 100).toFixed(1) + '%';
+            finalScores[a.id] += critWeights[gi] * weights[i];
+        });
+
+        const crAltEl = document.getElementById('cr-alt-' + group.criterionId);
+        if (crAltEl) {
+            const ok = cr < 0.1;
+            crAltEl.innerHTML = `Consistency Ratio: <span class="${ok ? 'cr-value' : 'cr-bad'}">${cr.toFixed(3)}</span> ${ok ? '✓ Acceptable' : '✗ Inconsistent'}`;
+        }
+    });
+
+    // Ranking
+    const sorted = [...alternativesData].sort((a, b) => finalScores[b.id] - finalScores[a.id]);
+    const ranks = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th'];
+    const rankOf = {};
+    sorted.forEach((a, i) => rankOf[a.id] = i);
+
+    alternativesData.forEach(a => {
+        const scoreEl = document.getElementById('rscore_' + a.id);
+        const rankEl = document.getElementById('rrank_' + a.id);
+        const card = document.getElementById('rcard_' + a.id);
+        if (scoreEl) scoreEl.textContent = (finalScores[a.id] * 100).toFixed(1) + '%';
+        if (rankEl) rankEl.textContent = (ranks[rankOf[a.id]] || (rankOf[a.id]+1)+'th') + ' place';
+        if (card) {
+            card.classList.toggle('winner', rankOf[a.id] === 0);
+            const old = card.querySelector('.winner-badge');
+            if (old) old.remove();
+            if (rankOf[a.id] === 0) {
+                const badge = document.createElement('div');
+                badge.className = 'winner-badge';
+                badge.textContent = '★ Best Choice';
+                card.appendChild(badge);
+            }
+        }
+    });
+
+    // Breakdown table
+    alternativesData.forEach(alt => {
+        const isWinner = rankOf[alt.id] === 0;
+        criteriaData.forEach((c, gi) => {
+            const td = document.getElementById('bd_' + alt.id + '_' + c.id);
+            const weights = altWeightsPerCrit[c.id];
+            if (td && weights) {
+                const idx = altIds.indexOf(alt.id);
+                td.textContent = (weights[idx] * 100).toFixed(1) + '%';
+                td.className = isWinner ? 'score-highlight' : 'score-dim';
+            }
+        });
+        const finalTd = document.getElementById('bd_final_' + alt.id);
+        if (finalTd) {
+            finalTd.textContent = (finalScores[alt.id] * 100).toFixed(1) + '%';
+            finalTd.style.color = isWinner ? 'var(--accent)' : 'var(--text)';
+        }
+    });
+
+    // Update slider labels
+    document.querySelectorAll('input[type=range]').forEach(s => {
+        const lblId = s.id.replace('slider_', 'lbl_');
+        const lbl = document.getElementById(lblId);
+        if (lbl) lbl.textContent = sliderLabel(parseInt(s.value));
+    });
+}
+
+// Initialize on load
+document.addEventListener('DOMContentLoaded', () => {
+    recalcAll();
+    @if (activeTab == "comparisons")
+    {
+        @:document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', i===1));
+    }
+});
+</script>
+}
+
+@functions {
+    static int AhpValueToSlider(double v)
+    {
+        if (v <= 0) return 9;
+        if (Math.Abs(v - 1.0) < 0.001) return 9;
+        if (v > 1.0)
+        {
+            // v = slider - 9 + 1  =>  slider = v + 9 - 1
+            int s = (int)Math.Round(v + 8);
+            return Math.Clamp(s, 10, 17);
+        }
+        else
+        {
+            // v = 1/(9-slider+1)  =>  9-slider+1 = 1/v  =>  slider = 10 - 1/v
+            int s = (int)Math.Round(10.0 - 1.0 / v);
+            return Math.Clamp(s, 1, 8);
+        }
+    }
+}
